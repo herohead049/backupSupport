@@ -10,6 +10,11 @@ var cdlibjs = require('cdlibjs');
 var amqp = require('amqplib');
 var moment = require('moment');
 var Hapi = require('hapi');
+var redis = require("redis");
+
+
+var webServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['http://backupreport.eu.mt.mtnet'] } } } });
+webServer.connection({ port: 8000 });
 
 // chalk object
 
@@ -27,6 +32,12 @@ var rabbitMQ = {
     'password': 'test',
     'virtualHost': '/test',
     'queue': 'nw.savegroup'
+};
+
+var redisConf = {
+    server: cdlibjs.getRedisAddress(),
+    port: 6379,
+    client: ""
 };
 
 function writeFile(file, data) {
@@ -78,15 +89,14 @@ getSaveGroup(sgRabbitMQ);
 //---------------------------
 
 
-var webHits = function () {
-    var webHitsName = "webHits",
-        webHitsServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['http://backupreport.eu.mt.mtnet'] } } } });
-    writeConsole(c.info, webHitsName, " process started");
-    webHitsServer.connection({
-        port: 8000
-    });
 
-    webHitsServer.route({
+var webHits = function () {
+    var webHitsName = "webHits";
+
+    writeConsole(c.info, webHitsName, " process started");
+
+
+    webServer.route({
         method: 'GET',
         path: '/php/{data}',
         handler: function (request, reply) {
@@ -94,17 +104,89 @@ var webHits = function () {
                 site = JSON.parse(d);
             fs.appendFile('newWebAccess.log', moment().format() + "," + site.webSite + "," + site.ip + "," + site.page + "," + site.duration + "," + site.link + "\n", function (err) {
                 if (err) { throw err; }
-                writeConsole(c.success, webHitsName, site.webSite + " " +  site.ip + " " +  site.page + " " +  site.duration + " " +  site.link);
-                    //console.log('The "data to append" was appended to file!');
+                console.log(moment().format(), site.webSite, site.ip, site.page, site.duration, site.link);
+                //console.log('The "data to append" was appended to file!');
             });
             reply('Thanks for the information that you uploaded.');
         }
     });
     // Start the server
-    webHitsServer.start(function () {
-        writeConsole(c.success, webHitsName, "Server running at " + webHitsServer.info.uri);
+
+
+};
+
+webHits();
+
+//*** emailLookup
+
+var emailLookup = function (redisConf) {
+    var emailLookUpName = "emailLookup",
+        emailLookupRedisClient = redis.createClient(redisConf.port, redisConf.server),
+        addEmail = function (redisKey, key, val) {
+            console.log('Added', val);
+            emailLookupRedisClient.hset(redisKey, key, val);
+        },
+        delEmail = function (redisKey, key) {
+            console.log("deleting", key);
+            emailLookupRedisClient.hdel(redisKey, key);
+        },
+        getEmail = function (redisKey, callback) {
+            emailLookupRedisClient.hgetall(redisKey, function (err, reply) {
+                callback(JSON.stringify(reply));
+            });
+        };
+    writeConsole(c.info, emailLookUpName, " process started");
+    emailLookupRedisClient.on("error", function (err) {
+        console.log("Error " + err);
+    });
+    writeConsole(c.info, emailLookUpName, 'Connected to :' + redisConf.server);
+
+    webServer.route({
+        method: 'GET',
+        path: '/',
+        handler: function (request, reply) {
+            reply('Hello, world!');
+        }
+    });
+
+    webServer.route({
+        method: 'GET',
+        path: '/get/emails',
+        handler: function (request, reply) {
+            getEmail("emailKey", function (em) {
+                console.log("sending emails", em);
+                reply(em);
+            });
+        }
+    });
+
+    webServer.route({
+        method: 'GET',
+        path: '/put/email/{name}',
+        handler: function (request, reply) {
+            var j = JSON.parse(request.params.name);
+            console.log(request.params.name);
+            addEmail("emailKey", j.name, j.email);
+            reply('Hello, ' + encodeURIComponent(request.params.name) + '!');
+        }
+    });
+
+    webServer.route({
+        method: 'GET',
+        path: '/del/email/{name}',
+        handler: function (request, reply) {
+            var j = JSON.parse(request.params.name);
+            console.log(request.params.name);
+            delEmail("emailKey", j.name);
+            reply('Hello, ' + encodeURIComponent(request.params.name) + '!');
+        }
     });
 };
 
+var emailLookupRedisConf = _.clone(redisConf);
+emailLookup(emailLookupRedisConf);
 
-webHits();
+webServer.start(function () {
+    console.log('info', "Server running at", webServer.info.uri);
+});
+
