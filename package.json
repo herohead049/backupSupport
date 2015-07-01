@@ -1,0 +1,11 @@
+{
+  "name": "support",
+  "version": "0.0.1",
+  "description": "Website for collecting data for backup tasks",
+  "author": "Craig David",
+  "dependencies": {
+    "cdlibjs": "^1.1.5",
+    "chalk": "^1.1.0",
+    "lodash": "^3.10.0"
+  }
+}
