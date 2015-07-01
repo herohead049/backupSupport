@@ -9,6 +9,7 @@ var _ = require('lodash');
 var cdlibjs = require('cdlibjs');
 var amqp = require('amqplib');
 var moment = require('moment');
+var Hapi = require('hapi');
 
 // chalk object
 
@@ -75,3 +76,35 @@ sgRabbitMQ.queue = 'nw.savegroup';
 getSaveGroup(sgRabbitMQ);
 
 //---------------------------
+
+
+var webHits = function () {
+    var webHitsName = "webHits",
+        webHitsServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['http://backupreport.eu.mt.mtnet'] } } } });
+    writeConsole(c.info, webHitsName, " process started");
+    webHitsServer.connection({
+        port: 8000
+    });
+
+    webHitsServer.route({
+        method: 'GET',
+        path: '/php/{data}',
+        handler: function (request, reply) {
+            var d = request.params.data,
+                site = JSON.parse(d);
+            fs.appendFile('newWebAccess.log', moment().format() + "," + site.webSite + "," + site.ip + "," + site.page + "," + site.duration + "," + site.link + "\n", function (err) {
+                if (err) { throw err; }
+                writeConsole(c.success, webHitsName, site.webSite + " " +  site.ip + " " +  site.page + " " +  site.duration + " " +  site.link);
+                    //console.log('The "data to append" was appended to file!');
+            });
+            reply('Thanks for the information that you uploaded.');
+        }
+    });
+    // Start the server
+    webHitsServer.start(function () {
+        writeConsole(c.success, webHitsName, "Server running at " + webHitsServer.info.uri);
+    });
+};
+
+
+webHits();
