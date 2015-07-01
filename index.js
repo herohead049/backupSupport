@@ -103,7 +103,7 @@ var webHits = function (processDetails) {
                 site = JSON.parse(d);
             fs.appendFile('newWebAccess.log', moment().format() + "," + site.webSite + "," + site.ip + "," + site.page + "," + site.duration + "," + site.link + "\n", function (err) {
                 if (err) { throw err; }
-                console.log(moment().format(), site.webSite, site.ip, site.page, site.duration, site.link);
+                //console.log(moment().format(), site.webSite, site.ip, site.page, site.duration, site.link);
                 writeConsole(c.info, processDetails.name, site.webSite + ":" + site.ip + ":" + site.page + ":" + site.duration + ":" + site.link);
                 //console.log('The "data to append" was appended to file!');
             });
