@@ -16,6 +16,9 @@ var redis = require("redis");
 var webServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['http://backupreport.eu.mt.mtnet'] } } } });
 webServer.connection({ port: 8000 });
 
+
+
+
 var processDetails = {
     name: "",
     description: ""
@@ -84,6 +87,18 @@ var getSaveGroup = function (rabbitMQ) {
             });
         });
     }).then(null, console.warn);
+};
+
+var processList = {
+    started: [],
+    getList: function () {
+        return this.started;
+    },
+    addList: function (process) {
+        this.started.push(process);
+        writeConsole(c.info, "setup", process + " process started");
+    }
+
 };
 
 //*** setup getSaveGroup process
@@ -242,6 +257,13 @@ webServer.start(function () {
 //---- start processes
 
 webHits(webHitsProcess);
+processList.addList("webHitsProcess");
 getEmailFromRabbit(emailRabbit, emailRabbitProcess);
+processList.addList("emailRabbitProcess");
 getSaveGroup(sgRabbitMQ);
+processList.addList("sgRabbitMQ");
 emailLookup(emailLookupRedisConf, emaillookupProcess);
+processList.addList("emaillookupProcess");
+
+
+console.log(processList.getList());
