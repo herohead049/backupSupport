@@ -17,13 +17,10 @@ var webServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['htt
 webServer.connection({ port: 8000 });
 
 
-
-
 var processDetails = {
     name: "",
     description: ""
 };
-
 
 // chalk object
 
