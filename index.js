@@ -245,13 +245,20 @@ emaillookupProcess.name = "Email lookup";
 emaillookupProcess.description = "retrieve emails from Redis";
 var emailLookupRedisConf = _.clone(redisConf);
 
-
+webServer.route({
+    method: 'GET',
+    path: '/processList',
+    handler: function (request, reply) {
+        reply(processList.getList());
+    }
+});
 
 // start webserver
 
 webServer.start(function () {
     //console.log('info', "Server running at", webServer.info.uri);
     writeConsole(c.info, "General webserver", "Started on " + webServer.info.uri);
+    writeConsole(c.info, "setup", "Use this to see processes running " + webServer.info.uri + "/processList");
 });
 
 //---- start processes
@@ -266,4 +273,3 @@ emailLookup(emailLookupRedisConf, emaillookupProcess);
 processList.addList("emaillookupProcess");
 
 
-console.log(processList.getList());
