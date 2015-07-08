@@ -4,13 +4,19 @@
 "use strict";
 
 var fs = require('fs');
-var chalk = require('chalk');
 var _ = require('lodash');
 var cdlibjs = require('cdlibjs');
 var amqp = require('amqplib');
 var moment = require('moment');
 var Hapi = require('hapi');
 var redis = require("redis");
+var util = require('../backupSupport/lib/cdutils.js');
+
+var c = util.chalk;
+var writeConsole = util.writeConsole;
+var writeFile = util.writeFile;
+
+
 
 
 var webServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['http://backupreport.eu.mt.mtnet'] } } } });
@@ -24,14 +30,6 @@ var processDetails = {
 
 // chalk object
 
-var c = {
-    error: chalk.bold.red,
-    success: chalk.bold.green,
-    standard: chalk.bold.gray,
-    disabled: chalk.underline.gray,
-    fileSave: chalk.green,
-    info: chalk.inverse.yellow
-};
 var rabbitMQ = {
     'server': cdlibjs.getRabbitMQAddress(),
     'username': 'test',
@@ -46,19 +44,9 @@ var redisConf = {
     client: ""
 };
 
-function writeFile(file, data) {
-    var fs = require('fs');
-    fs.writeFile(file, data, function (err) {
-        if (err) {
-            return console.log(c.error(err));
-        }
-        //console.log("The file was saved!");
-    });
-}
 
-function writeConsole(chalk, processName, data) {
-    console.log(chalk(moment().format(), processName, data));
-}
+
+
 
 //******** getSavegroup
 
@@ -270,6 +258,7 @@ webServer.start(function () {
 
 //---- start processes
 
+
 webHits(webHitsProcess);
 processList.addList("webHitsProcess");
 getEmailFromRabbit(emailRabbit, emailRabbitProcess);
@@ -278,5 +267,6 @@ getSaveGroup(sgRabbitMQ);
 processList.addList("sgRabbitMQ");
 emailLookup(emailLookupRedisConf, emaillookupProcess);
 processList.addList("emaillookupProcess");
+
 
 
