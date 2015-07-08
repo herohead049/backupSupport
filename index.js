@@ -166,6 +166,16 @@ var emailLookup = function (redisConf, processDetails) {
             });
         }
     });
+    webServer.route({
+        method: 'GET',
+        path: '/get/testEmails',
+        handler: function (request, reply) {
+            getEmail("emailKeyTest", function (em) {
+                writeConsole(c.standard, processDetails.name, "sending emails  " +  em);
+                reply(em);
+            });
+        }
+    });
 
     webServer.route({
         method: 'GET',
