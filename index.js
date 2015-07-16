@@ -16,12 +16,8 @@ var c = util.chalk;
 var writeConsole = util.writeConsole;
 var writeFile = util.writeFile;
 
-
-
-
 var webServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['http://backupreport.eu.mt.mtnet'] } } } });
 webServer.connection({ port: 8000 });
-
 
 var processDetails = {
     name: "",
@@ -50,7 +46,7 @@ var redisConf = {
 
 //******** getSavegroup
 
-var getSaveGroup = function (rabbitMQ) {
+function getSaveGroup(rabbitMQ) {
 
     var sgName = "getSavegroup",
         rabbitMQAuthString = 'amqp://' + rabbitMQ.username + ':' + rabbitMQ.password + '@' + rabbitMQ.server + rabbitMQ.virtualHost;
@@ -72,7 +68,7 @@ var getSaveGroup = function (rabbitMQ) {
             });
         });
     }).then(null, console.warn);
-};
+}
 
 var processList = {
     started: [],
@@ -93,7 +89,7 @@ var processList = {
 
 
 
-var webHits = function (processDetails) {
+function webHits(processDetails) {
     writeConsole(c.info, processDetails.name, " process started");
     webServer.route({
         method: 'GET',
@@ -104,18 +100,18 @@ var webHits = function (processDetails) {
             fs.appendFile('newWebAccess.log', moment().format() + "," + site.webSite + "," + site.ip + "," + site.page + "," + site.duration + "," + site.link + "\n", function (err) {
                 if (err) { throw err; }
                 //console.log(moment().format(), site.webSite, site.ip, site.page, site.duration, site.link);
-                writeConsole(c.info, processDetails.name, site.webSite + ":" + site.ip + ":" + site.page + ":" + site.duration + ":" + site.link);
+                writeConsole(c.info, processDetails.name, site.webSite + ":" + site.ip + ":" + site.page + ":" + site.duration + ":" + site.link + ":" + site.username);
                 //console.log('The "data to append" was appended to file!');
             });
             reply('Thanks for the information that you uploaded.');
         }
     });
     // Start the server
-};
+}
 
 //*** emailLookup
 
-var emailLookup = function (redisConf, processDetails) {
+function emailLookup(redisConf, processDetails) {
     var emailLookupRedisClient = redis.createClient(redisConf.port, redisConf.server),
         addEmail = function (redisKey, key, val) {
             console.log('Added', val);
@@ -186,7 +182,7 @@ var emailLookup = function (redisConf, processDetails) {
             reply('Hello, ' + encodeURIComponent(request.params.name) + '!');
         }
     });
-};
+}
 
 var getEmailFromRabbit = function (rabbitMQ, processDetails) {
     writeConsole(c.info, processDetails.name, " process started");
@@ -267,6 +263,4 @@ getSaveGroup(sgRabbitMQ);
 processList.addList("sgRabbitMQ");
 emailLookup(emailLookupRedisConf, emaillookupProcess);
 processList.addList("emaillookupProcess");
-
-
 
