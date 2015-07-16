@@ -116,7 +116,7 @@ var webHits = function (processDetails) {
             fs.appendFile('newWebAccess.log', moment().format() + "," + site.webSite + "," + site.ip + "," + site.page + "," + site.duration + "," + site.link + "\n", function (err) {
                 if (err) { throw err; }
                 //console.log(moment().format(), site.webSite, site.ip, site.page, site.duration, site.link);
-                writeConsole(c.info, processDetails.name, site.webSite + ":" + site.ip + ":" + site.page + ":" + site.duration + ":" + site.link);
+                writeConsole(c.info, processDetails.name, site.webSite + ":" + site.ip + ":" + site.page + ":" + site.duration + ":" + site.link + ":" + site.username);
                 //console.log('The "data to append" was appended to file!');
             });
             reply('Thanks for the information that you uploaded.');
