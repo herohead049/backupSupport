@@ -1,5 +1,8 @@
 /*jslint nomen: true */
 /*jslint node:true */
+/*jslint vars: true */
+/*jslint es5: true */
+
 
 "use strict";
 
@@ -16,8 +19,18 @@ var c = util.chalk;
 var writeConsole = util.writeConsole;
 var writeFile = util.writeFile;
 
-var webServer = new Hapi.Server({ connections: { routes: { cors: { origin: ['http://backupreport.eu.mt.mtnet'] } } } });
-webServer.connection({ port: 8000 });
+var webServer = new Hapi.Server({
+    connections: {
+        routes: {
+            cors: {
+                origin: ['http://backupreport.eu.mt.mtnet']
+            }
+        }
+    }
+});
+webServer.connection({
+    port: 8000
+});
 
 var processDetails = {
     name: "",
@@ -52,16 +65,22 @@ function getSaveGroup(rabbitMQ) {
         rabbitMQAuthString = 'amqp://' + rabbitMQ.username + ':' + rabbitMQ.password + '@' + rabbitMQ.server + rabbitMQ.virtualHost;
     writeConsole(c.info, sgName, " process started");
     amqp.connect(rabbitMQAuthString).then(function (conn) {
-        process.once('SIGINT', function () { conn.close(); });
+        process.once('SIGINT', function () {
+            conn.close();
+        });
         return conn.createChannel().then(function (ch) {
-            var ok = ch.assertQueue(rabbitMQ.queue, {durable: true});
+            var ok = ch.assertQueue(rabbitMQ.queue, {
+                durable: true
+            });
             ok = ok.then(function (_qok) {
                 return ch.consume(rabbitMQ.queue, function (msg) {
                     var saveGroup = JSON.parse(msg.content);
                     writeConsole(c.success, sgName, saveGroup.fileName);
                     writeFile('savedFiles/' + saveGroup.fileName, saveGroup.data);
                     ch.ack(msg);
-                }, {noAck: false});
+                }, {
+                    noAck: false
+                });
             });
             return ok.then(function (_consumeOk) {
                 writeConsole(c.success, sgName, ' [*] Waiting for messages from quename "' + rabbitMQ.queue + '" To exit press CTRL+C');
@@ -98,7 +117,9 @@ function webHits(processDetails) {
             var d = request.params.data,
                 site = JSON.parse(d);
             fs.appendFile('newWebAccess.log', moment().format() + "," + site.webSite + "," + site.ip + "," + site.page + "," + site.duration + "," + site.link + "\n", function (err) {
-                if (err) { throw err; }
+                if (err) {
+                    throw err;
+                }
                 //console.log(moment().format(), site.webSite, site.ip, site.page, site.duration, site.link);
                 writeConsole(c.info, processDetails.name, site.webSite + ":" + site.ip + ":" + site.page + ":" + site.duration + ":" + site.link + ":" + site.username);
                 //console.log('The "data to append" was appended to file!');
@@ -145,7 +166,7 @@ function emailLookup(redisConf, processDetails) {
         path: '/get/emails',
         handler: function (request, reply) {
             getEmail("emailKey", function (em) {
-                writeConsole(c.standard, processDetails.name, "sending emails  " +  em);
+                writeConsole(c.standard, processDetails.name, "sending emails  " + em);
                 reply(em);
             });
         }
@@ -155,7 +176,7 @@ function emailLookup(redisConf, processDetails) {
         path: '/get/testEmails',
         handler: function (request, reply) {
             getEmail("emailKeyTest", function (em) {
-                writeConsole(c.standard, processDetails.name, "sending emails  " +  em);
+                writeConsole(c.standard, processDetails.name, "sending emails  " + em);
                 reply(em);
             });
         }
@@ -188,9 +209,13 @@ var getEmailFromRabbit = function (rabbitMQ, processDetails) {
     writeConsole(c.info, processDetails.name, " process started");
     var rabbitMQAuthString = 'amqp://' + rabbitMQ.username + ':' + rabbitMQ.password + '@' + rabbitMQ.server + rabbitMQ.virtualHost;
     amqp.connect(rabbitMQAuthString).then(function (conn) {
-        process.once('SIGINT', function () { conn.close(); });
+        process.once('SIGINT', function () {
+            conn.close();
+        });
         return conn.createChannel().then(function (ch) {
-            var ok = ch.assertQueue(rabbitMQ.queue, {durable: true});
+            var ok = ch.assertQueue(rabbitMQ.queue, {
+                durable: true
+            });
             ok = ok.then(function (_qok) {
                 return ch.consume(rabbitMQ.queue, function (msg) {
                     var emailServer = JSON.parse(msg.content);
@@ -201,7 +226,9 @@ var getEmailFromRabbit = function (rabbitMQ, processDetails) {
                         cdlibjs.sendEmailHtml(emailServer);
                         ch.ack(msg);
                     }
-                }, {noAck: false});
+                }, {
+                    noAck: false
+                });
             });
             return ok.then(function (_consumeOk) {
                 writeConsole(c.success, processDetails.name, ' [*] Waiting for messages from quename "' + rabbitMQ.queue + '" To exit press CTRL+C');
@@ -263,4 +290,3 @@ getSaveGroup(sgRabbitMQ);
 processList.addList("sgRabbitMQ");
 emailLookup(emailLookupRedisConf, emaillookupProcess);
 processList.addList("emaillookupProcess");
-
