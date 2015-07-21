@@ -3,8 +3,10 @@
 /*jslint vars: true */
 /*jslint es5: true */
 
+/*eslint-env node */
+/*eslint quotes: [2, "single"], curly: 2*/
 
-"use strict";
+'use strict';
 
 var fs = require('fs');
 var _ = require('lodash');
@@ -12,7 +14,7 @@ var cdlibjs = require('cdlibjs');
 var amqp = require('amqplib');
 var moment = require('moment');
 var Hapi = require('hapi');
-var redis = require("redis");
+var redis = require('redis');
 var util = require('../backupSupport/lib/cdutils.js');
 
 var c = util.chalk;
@@ -33,8 +35,8 @@ webServer.connection({
 });
 
 var processDetails = {
-    name: "",
-    description: ""
+    name: '',
+    description: ''
 };
 
 // chalk object
@@ -50,7 +52,7 @@ var rabbitMQ = {
 var redisConf = {
     server: cdlibjs.getRedisAddress(),
     port: 6379,
-    client: ""
+    client: ''
 };
 
 
@@ -59,21 +61,22 @@ var redisConf = {
 
 //******** getSavegroup
 
-function getSaveGroup(rabbitMQ) {
 
-    var sgName = "getSavegroup",
-        rabbitMQAuthString = 'amqp://' + rabbitMQ.username + ':' + rabbitMQ.password + '@' + rabbitMQ.server + rabbitMQ.virtualHost;
-    writeConsole(c.info, sgName, " process started");
-    amqp.connect(rabbitMQAuthString).then(function (conn) {
+function getSaveGroup(rMQ) {
+
+    var sgName = 'getSavegroup',
+        rMQAuthString = 'amqp://' + rMQ.username + ':' + rMQ.password + '@' + rMQ.server + rMQ.virtualHost;
+    writeConsole(c.info, sgName, ' process started');
+    amqp.connect(rMQAuthString).then(function (conn) {
         process.once('SIGINT', function () {
             conn.close();
         });
         return conn.createChannel().then(function (ch) {
-            var ok = ch.assertQueue(rabbitMQ.queue, {
+            var ok = ch.assertQueue(rMQ.queue, {
                 durable: true
             });
-            ok = ok.then(function (_qok) {
-                return ch.consume(rabbitMQ.queue, function (msg) {
+            ok = ok.then(function () {
+                return ch.consume(rMQ.queue, function (msg) {
                     var saveGroup = JSON.parse(msg.content);
                     writeConsole(c.success, sgName, saveGroup.fileName);
                     writeFile('savedFiles/' + saveGroup.fileName, saveGroup.data);
@@ -82,8 +85,8 @@ function getSaveGroup(rabbitMQ) {
                     noAck: false
                 });
             });
-            return ok.then(function (_consumeOk) {
-                writeConsole(c.success, sgName, ' [*] Waiting for messages from quename "' + rabbitMQ.queue + '" To exit press CTRL+C');
+            return ok.then(function () {
+                writeConsole(c.success, sgName, ' [*] Waiting for messages from quename "' + rMQ.queue + '" To exit press CTRL+C');
             });
         });
     }).then(null, console.warn);
@@ -96,7 +99,7 @@ var processList = {
     },
     addList: function (process) {
         this.started.push(process);
-        writeConsole(c.info, "setup", process + " process started");
+        writeConsole(c.info, 'setup', process + ' process started');
     }
 
 };
@@ -108,20 +111,20 @@ var processList = {
 
 
 
-function webHits(processDetails) {
-    writeConsole(c.info, processDetails.name, " process started");
+function webHits(pDetails) {
+    writeConsole(c.info, pDetails.name, ' process started');
     webServer.route({
         method: 'GET',
         path: '/php/{data}',
         handler: function (request, reply) {
             var d = request.params.data,
                 site = JSON.parse(d);
-            fs.appendFile('newWebAccess.log', moment().format() + "," + site.webSite + "," + site.ip + "," + site.page + "," + site.duration + "," + site.link + "\n", function (err) {
+            fs.appendFile('newWebAccess.log', moment().format() + ',' + site.webSite + ',' + site.ip + ',' + site.page + ',' + site.duration + ',' + site.link + '\n', function (err) {
                 if (err) {
                     throw err;
                 }
                 //console.log(moment().format(), site.webSite, site.ip, site.page, site.duration, site.link);
-                writeConsole(c.info, processDetails.name, site.webSite + ":" + site.ip + ":" + site.page + ":" + site.duration + ":" + site.link + ":" + site.username);
+                writeConsole(c.info, pDetails.name, site.webSite + ':' + site.ip + ':' + site.page + ':' + site.duration + ':' + site.link + ':' + site.username);
                 //console.log('The "data to append" was appended to file!');
             });
             reply('Thanks for the information that you uploaded.');
@@ -132,26 +135,30 @@ function webHits(processDetails) {
 
 //*** emailLookup
 
-function emailLookup(redisConf, processDetails) {
-    var emailLookupRedisClient = redis.createClient(redisConf.port, redisConf.server),
+
+function emailLookup(rConf, pDetails) {
+    var emailLookupRedisClient = redis.createClient(rConf.port, rConf.server),
         addEmail = function (redisKey, key, val) {
             console.log('Added', val);
             emailLookupRedisClient.hset(redisKey, key, val);
         },
         delEmail = function (redisKey, key) {
-            console.log("deleting", key);
+            console.log('deleting', key);
             emailLookupRedisClient.hdel(redisKey, key);
         },
         getEmail = function (redisKey, callback) {
             emailLookupRedisClient.hgetall(redisKey, function (err, reply) {
+                if (err) {
+                    console.log('redis error');
+                }
                 callback(JSON.stringify(reply));
             });
         };
-    writeConsole(c.info, processDetails.name, " process started");
-    emailLookupRedisClient.on("error", function (err) {
-        console.log("Error " + err);
+    writeConsole(c.info, pDetails.name, ' process started');
+    emailLookupRedisClient.on('error', function (err) {
+        console.log('Error ' + err);
     });
-    writeConsole(c.info, processDetails.name, 'Connected to :' + redisConf.server);
+    writeConsole(c.info, pDetails.name, 'Connected to :' + rConf.server);
 
     webServer.route({
         method: 'GET',
@@ -165,8 +172,8 @@ function emailLookup(redisConf, processDetails) {
         method: 'GET',
         path: '/get/emails',
         handler: function (request, reply) {
-            getEmail("emailKey", function (em) {
-                writeConsole(c.standard, processDetails.name, "sending emails  " + em);
+            getEmail('emailKey', function (em) {
+                writeConsole(c.standard, pDetails.name, 'sending emails  ' + em);
                 reply(em);
             });
         }
@@ -175,8 +182,8 @@ function emailLookup(redisConf, processDetails) {
         method: 'GET',
         path: '/get/testEmails',
         handler: function (request, reply) {
-            getEmail("emailKeyTest", function (em) {
-                writeConsole(c.standard, processDetails.name, "sending emails  " + em);
+            getEmail('emailKeyTest', function (em) {
+                writeConsole(c.standard, pDetails.name, 'sending emails  ' + em);
                 reply(em);
             });
         }
@@ -188,7 +195,7 @@ function emailLookup(redisConf, processDetails) {
         handler: function (request, reply) {
             var j = JSON.parse(request.params.name);
             console.log(request.params.name);
-            addEmail("emailKey", j.name, j.email);
+            addEmail('emailKey', j.name, j.email);
             reply('Hello, ' + encodeURIComponent(request.params.name) + '!');
         }
     });
@@ -199,28 +206,28 @@ function emailLookup(redisConf, processDetails) {
         handler: function (request, reply) {
             var j = JSON.parse(request.params.name);
             console.log(request.params.name);
-            delEmail("emailKey", j.name);
+            delEmail('emailKey', j.name);
             reply('Hello, ' + encodeURIComponent(request.params.name) + '!');
         }
     });
 }
 
-var getEmailFromRabbit = function (rabbitMQ, processDetails) {
-    writeConsole(c.info, processDetails.name, " process started");
-    var rabbitMQAuthString = 'amqp://' + rabbitMQ.username + ':' + rabbitMQ.password + '@' + rabbitMQ.server + rabbitMQ.virtualHost;
-    amqp.connect(rabbitMQAuthString).then(function (conn) {
+function getEmailFromRabbit(rMQ, pDetails) {
+    writeConsole(c.info, pDetails.name, ' process started');
+    var rMQAuthString = 'amqp://' + rMQ.username + ':' + rMQ.password + '@' + rMQ.server + rMQ.virtualHost;
+    amqp.connect(rMQAuthString).then(function (conn) {
         process.once('SIGINT', function () {
             conn.close();
         });
         return conn.createChannel().then(function (ch) {
-            var ok = ch.assertQueue(rabbitMQ.queue, {
+            var ok = ch.assertQueue(rMQ.queue, {
                 durable: true
             });
-            ok = ok.then(function (_qok) {
-                return ch.consume(rabbitMQ.queue, function (msg) {
+            ok = ok.then(function () {
+                return ch.consume(rMQ.queue, function (msg) {
                     var emailServer = JSON.parse(msg.content);
                     //console.log(moment().format(), emailServer.to, emailServer.from, emailServer.subject);
-                    writeConsole(c.info, processDetails.name, emailServer.to + ":" + emailServer.from + ":" + emailServer.subject);
+                    writeConsole(c.info, pDetails.name, emailServer.to + ':' + emailServer.from + ':' + emailServer.subject);
 
                     if (emailServer.type === 'html') {
                         cdlibjs.sendEmailHtml(emailServer);
@@ -230,25 +237,25 @@ var getEmailFromRabbit = function (rabbitMQ, processDetails) {
                     noAck: false
                 });
             });
-            return ok.then(function (_consumeOk) {
-                writeConsole(c.success, processDetails.name, ' [*] Waiting for messages from quename "' + rabbitMQ.queue + '" To exit press CTRL+C');
+            return ok.then(function () {
+                writeConsole(c.success, pDetails.name, ' [*] Waiting for messages from quename "' + rMQ.queue + '" To exit press CTRL+C');
                 //console.log(' [*] Waiting for messages. To exit press CTRL+C');
             });
         });
     }).then(null, console.warn);
 
-};
+}
 
 
 //** setup process
 
 var emailRabbitProcess = _.clone(processDetails, true);
-emailRabbitProcess.name = "Email Rabbit collection";
-emailRabbitProcess.description = "This will get the emails from rabbit to sent";
+emailRabbitProcess.name = 'Email Rabbit collection';
+emailRabbitProcess.description = 'This will get the emails from rabbit to sent';
 //----------------------------
 var webHitsProcess = _.clone(processDetails, true);
-webHitsProcess.name = "webHits";
-webHitsProcess.description = "Web tracking process";
+webHitsProcess.name = 'webHits';
+webHitsProcess.description = 'Web tracking process';
 var emailRabbit = _.clone(rabbitMQ, true);
 emailRabbit.queue = 'notifications.email';
 
@@ -259,8 +266,8 @@ sgRabbitMQ.queue = 'nw.savegroup';
 
 //------------------
 var emaillookupProcess = _.clone(processDetails, true);
-emaillookupProcess.name = "Email lookup";
-emaillookupProcess.description = "retrieve emails from Redis";
+emaillookupProcess.name = 'Email lookup';
+emaillookupProcess.description = 'retrieve emails from Redis';
 var emailLookupRedisConf = _.clone(redisConf);
 
 webServer.route({
@@ -275,18 +282,18 @@ webServer.route({
 
 webServer.start(function () {
     //console.log('info', "Server running at", webServer.info.uri);
-    writeConsole(c.info, "General webserver", "Started on " + webServer.info.uri);
-    writeConsole(c.info, "setup", "Use this to see processes running " + webServer.info.uri + "/processList");
+    writeConsole(c.info, 'General webserver', 'Started on ' + webServer.info.uri);
+    writeConsole(c.info, 'setup', 'Use this to see processes running ' + webServer.info.uri + '/processList');
 });
 
 //---- start processes
 
 
 webHits(webHitsProcess);
-processList.addList("webHitsProcess");
+processList.addList('webHitsProcess');
 getEmailFromRabbit(emailRabbit, emailRabbitProcess);
-processList.addList("emailRabbitProcess");
+processList.addList('emailRabbitProcess');
 getSaveGroup(sgRabbitMQ);
-processList.addList("sgRabbitMQ");
+processList.addList('sgRabbitMQ');
 emailLookup(emailLookupRedisConf, emaillookupProcess);
-processList.addList("emaillookupProcess");
+processList.addList('emaillookupProcess');
