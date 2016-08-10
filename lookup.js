@@ -11,9 +11,9 @@ var redisConf = {
 };
 
 var emailList = [
-    {name: "craig David", email: 'craig.david@mt.com'},
-    {name: "Craig Gmail", email: 'herohead@gmail.com'},
-    {name: "Craig Gmail", email: 'herohead@gmail.com'}
+    {name: "craig David", email: 'gmail@gmail.com'},
+    {name: "Craig Gmail", email: 'gmail@gmail.com'},
+    {name: "Craig Gmail", email: 'gmail@gmail.com'}
 ];
 
 
